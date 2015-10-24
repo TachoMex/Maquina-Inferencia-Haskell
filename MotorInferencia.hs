@@ -17,11 +17,15 @@ module MotorInferencia (
 	encandenarAdelanteIO' (regla : mc) mt =	do
 		putStrLn $ "Probando regla: "++(show regla)
 		putStrLn $ show mt
+		putStrLn $ show $ Regla.objetivo regla
 		(mt',activacion) <- evaluaIO regla mt
+		putStrLn $ show activacion
 		case activacion of
 			(Just value) -> if Regla.objetivo regla && (value == DB.true) then 
 				return (mt', Just $ atomoConclusion regla) 
-				else 
+				else if value == DB.true then
 				encandenarAdelanteIO' mc $ dispara regla mt' 
+				else
+				encandenarAdelanteIO' mc mt'
 			Nothing -> encandenarAdelanteIO' mc mt'
 

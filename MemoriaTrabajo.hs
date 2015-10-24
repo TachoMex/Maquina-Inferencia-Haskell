@@ -14,7 +14,7 @@ module MemoriaTrabajo(
 	agrega :: MemoriaTrabajo t -> String -> t -> MemoriaTrabajo t
 	agrega mt atomo valor = 
 		if Map.member atomo mt' then
-			error ("Atomo "++atomo++" duplicado")
+			mt
 		else 
 			MemoriaTrabajo (Map.insert atomo valor mt')
 		where

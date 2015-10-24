@@ -33,7 +33,7 @@ module Regla (
 	analizaXML s = analizaXML' (words s) [] [] False False False False False False
 
 	analizaXML' :: (DB.Boolean t) => [String] ->  [ParteRegla t] -> [ParteRegla t] ->Bool -> Bool -> Bool -> Bool -> Bool -> Bool -> Regla t
-	analizaXML' [] condicion conclusion _ _ _ _ _ reglaObj = Regla (reverse condicion) (reverse conclusion) False False reglaObj
+	analizaXML' [] condicion conclusion _ _ _ _ _ reglaObj = Regla (reverse condicion) (reverse conclusion) False reglaObj False
 	analizaXML' (parte:resto) condicion conclusion regla cond conc atomo obj reglaObj = case parte of 
 		"<atomo>"      -> analizaXML' resto condicion conclusion regla cond conc True False reglaObj
 		"</atomo>"     -> analizaXML' resto condicion conclusion regla cond conc False False reglaObj
@@ -57,7 +57,7 @@ module Regla (
 	evalua' ((PRO Disyuncion):resto) (verdad1:verdad2:pila) mt = evalua' resto ((verdad1 DB.||* verdad2):pila) mt
 	evalua' ((PRO Negacion):resto) (verdad1:pila) mt = evalua' resto ((DB.notB verdad1):pila) mt
 	evalua' ((PRA (Atomo atomo val _)):resto) pila mt = case (consultaValor mt atomo) of 
-		(Just v) -> evalua' resto (v:pila) mt 
+		(Just v) -> evalua' resto ((v DB.&&* val):pila) mt 
 		Nothing -> Nothing
 
 	evalua' _ _ _ = Nothing
