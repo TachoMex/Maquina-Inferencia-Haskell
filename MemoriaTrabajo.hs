@@ -6,7 +6,6 @@ module MemoriaTrabajo(
 )where
 	import qualified Data.Map as Map
 	import qualified Data.Boolean as DB
-	import Consultor
 	data MemoriaTrabajo t = MemoriaTrabajo{
 		atomos :: Map.Map String t
 	}
@@ -24,8 +23,8 @@ module MemoriaTrabajo(
 	consultaValor mt atomo = Map.lookup  atomo mt'
 		where mt' = atomos mt 
 
-	consultaValorIO :: (DB.Boolean t) => MemoriaTrabajo t -> String ->IO (MemoriaTrabajo t, t)
-	consultaValorIO mt atomo = do 
+	consultaValorIO :: (DB.Boolean t) => MemoriaTrabajo t -> String -> (String -> IO t) ->IO (MemoriaTrabajo t, t)
+	consultaValorIO mt atomo preguntarAtomo= do 
 		let valor' = consultaValor mt atomo
 		case valor' of 
 			(Just v) -> return (mt, v)

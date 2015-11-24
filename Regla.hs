@@ -2,9 +2,11 @@ module Regla (
 	Regla(..),
 	analizaXML,
 	evalua,
+	evaluaIOf,
 	evaluaIO,
 	atomoConclusion,
-	dispara
+	dispara,
+	disparaNegadas
 )where
 	import ParteRegla
 	import Operador
@@ -12,6 +14,7 @@ module Regla (
 	import Atomo
 	import qualified Data.Boolean as DB
 	import MemoriaTrabajo
+	import Consultor
 
 	data Regla t = Regla {
 		condicion  :: [ParteRegla t],
@@ -51,6 +54,8 @@ module Regla (
 	evalua :: (DB.Boolean t) => Regla t -> MemoriaTrabajo t -> Maybe t
 	evalua (Regla cond conc _ _ _) mt = evalua' cond [] mt
 
+
+
 	evalua' :: (DB.Boolean t) => [ParteRegla t] -> [t] -> MemoriaTrabajo t -> Maybe t
 	evalua' [] [r] mt = Just r
 	evalua' ((PRO Conjuncion):resto) (verdad1:verdad2:pila) mt = evalua' resto ((verdad1 DB.&&* verdad2):pila) mt
@@ -64,24 +69,31 @@ module Regla (
 
 
 	evaluaIO :: (DB.Boolean t) => Regla t -> MemoriaTrabajo t -> IO (MemoriaTrabajo t, Maybe t)
-	evaluaIO (Regla cond conc _ _ _) mt = evaluaIO' cond [] mt
+	evaluaIO (Regla cond conc _ _ _) mt = evaluaIO' cond [] mt preguntarAtomo
 
-	evaluaIO' :: (DB.Boolean t) => [ParteRegla t] -> [t] -> MemoriaTrabajo t -> IO (MemoriaTrabajo t, Maybe t)
-	evaluaIO' [] [r] mt = return (mt,(Just r))
-	evaluaIO' ((PRO Conjuncion):resto) (verdad1:verdad2:pila) mt = evaluaIO' resto ((verdad1 DB.&&* verdad2):pila) mt
-	evaluaIO' ((PRO Disyuncion):resto) (verdad1:verdad2:pila) mt = evaluaIO' resto ((verdad1 DB.||* verdad2):pila) mt
-	evaluaIO' ((PRO Negacion):resto) (verdad1:pila) mt = evaluaIO' resto ((DB.notB verdad1):pila) mt
-	evaluaIO' ((PRA (Atomo atomo val _)):resto) pila mt = do
-		(mt',v) <- consultaValorIO mt atomo 
-		evaluaIO' resto (v:pila) mt' 
-	evaluaIO' _ _ mt = return (mt,Nothing)
+	evaluaIOf :: (DB.Boolean t) => Regla t -> MemoriaTrabajo t ->(String -> IO t) ->IO (MemoriaTrabajo t, Maybe t)
+	evaluaIOf (Regla cond conc _ _ _) mt f = evaluaIO' cond [] mt f
+
+	evaluaIO' :: (DB.Boolean t) => [ParteRegla t] -> [t] -> MemoriaTrabajo t -> ( String -> IO t ) ->IO (MemoriaTrabajo t, Maybe t)
+	evaluaIO' [] [r] mt _= return (mt,(Just r))
+	evaluaIO' ((PRO Conjuncion):resto) (verdad1:verdad2:pila) mt f = evaluaIO' resto ((verdad1 DB.&&* verdad2):pila) mt f
+	evaluaIO' ((PRO Disyuncion):resto) (verdad1:verdad2:pila) mt f = evaluaIO' resto ((verdad1 DB.||* verdad2):pila) mt f
+	evaluaIO' ((PRO Negacion):resto) (verdad1:pila) mt f = evaluaIO' resto ((DB.notB verdad1):pila) mt f
+	evaluaIO' ((PRA (Atomo atomo val _)):resto) pila mt f = do
+		(mt',v) <- consultaValorIO mt atomo f 
+		evaluaIO' resto (v:pila) mt' f 
+	evaluaIO' _ _ mt _ = return (mt,Nothing)
 
 	atomoConclusion (Regla _ ((PRA atomo):_) _ _ _)  = atomo
 
 	dispara (Regla _ conclusion _ _ _) mt = foldl 
 		(\ mt (Atomo descripcion valor _) -> agrega mt descripcion valor ) mt $ extraeAtomosConclusion conclusion []
 
+	disparaNegadas (Regla _ conclusion _ _ _) mt = foldl 
+		(\ mt (Atomo descripcion valor _) -> agrega mt descripcion (DB.notB valor) ) mt $ extraeAtomosConclusion conclusion []
+
 	extraeAtomosConclusion [] atomos = atomos
 	extraeAtomosConclusion ((PRO Negacion):resto) ((Atomo descripcion valor obj ):atomos) = extraeAtomosConclusion resto ((Atomo descripcion (DB.notB valor ) obj):atomos) 
 	extraeAtomosConclusion ((PRA atomo ):resto) atomos = extraeAtomosConclusion resto (atomo:atomos)
 	extraeAtomosConclusion (_:resto) atomos = extraeAtomosConclusion resto atomos
+
